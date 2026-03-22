@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-U-Net 训练子进程：完全独立，不导入 rock_seg_model/cv2，仅用 torch + numpy + PIL。
-用于避免 0xC0000005（若仍崩溃则多为本机 PyTorch/NumPy 与系统不兼容）。
-"""
 import sys
 import os
 
@@ -149,10 +145,8 @@ def main():
     loader = DataLoader(DS(), batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
     log("正在创建模型...")
     model = UNet(3, 1).to(device)
-    # 反向时崩多为 MKL；改用 SGD 有时可避开 Adam 触发的路径
     opt = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
     log("开始训练...")
-    # 预热：仅前向一次，若此处崩则为前向/读数据问题，若之后崩则为 backward
     it = iter(loader)
     imgs_b, masks_b = next(it)
     imgs_b, masks_b = imgs_b.to(device), masks_b.to(device)
@@ -179,7 +173,6 @@ def main():
     os.makedirs(os.path.dirname(args.save_path) or '.', exist_ok=True)
     torch.save({"model_state": model.state_dict()}, args.save_path)
     log(f"模型已保存: {args.save_path}")
-    # 保存训练曲线数据供软件界面绘制
     history_path = args.save_path.rsplit(".", 1)[0] + "_history.json"
     try:
         with open(history_path, "w", encoding="utf-8") as f:

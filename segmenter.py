@@ -7,13 +7,11 @@ from collections import Counter
 import json
 
 
-# ========== 分割 ===========
 class RockSegmenter:
     def __init__(self, log_callback=None):
         self.segmentation_methods_used = {}
-        self.log_callback = log_callback  # 日志回调函数
+        self.log_callback = log_callback 
 
-        # 中文方法名称映射
         self.method_names = {
             'grabcut': 'GrabCut智能分割',
             'color': '颜色阈值分割',
@@ -31,14 +29,12 @@ class RockSegmenter:
         self._dl_use_gpu = True
 
     def log(self, message):
-        """日志输出"""
         if self.log_callback:
             self.log_callback(message)
         else:
             print(f"[Segmenter] {message}")
 
     def segment_by_methods(self, image, image_name, selected_methods, log_callback=None):
-        """使用选定的方法进行分割，返回所有方法的结果"""
         if log_callback:
             self.log_callback = log_callback
         
@@ -49,7 +45,6 @@ class RockSegmenter:
         self.log(f"图像尺寸: {image.shape[1]}×{image.shape[0]}")
         self.log(f"选择的分割方法: {', '.join(selected_methods)}")
         
-        # 图像预处理
         processed = self._preprocess_image_enhanced(image)
         self.log("✓ 图像预处理完成（降噪、增强对比度）")
         
@@ -94,11 +89,8 @@ class RockSegmenter:
         return results   
         
     def _preprocess_image_enhanced(self, image):
-        """增强的图像预处理"""
-        # 1. 降噪
         denoised = cv2.bilateralFilter(image, 9, 75, 75)
         
-        # 2. 增强对比度（CLAHE）
         lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         lab[:, :, 0] = clahe.apply(lab[:, :, 0])
@@ -107,7 +99,6 @@ class RockSegmenter:
         return enhanced
     
     def _segment_by_grabcut_enhanced(self, processed, original):
-        """增强的GrabCut分割（大图缩放到 600 内 + 少迭代，避免卡在首图）"""
         h_orig, w_orig = processed.shape[:2]
         max_side = 600
         scale = 1.0
@@ -120,7 +111,6 @@ class RockSegmenter:
             work_img = processed
 
         h, w = work_img.shape[:2]
-        # 使用颜色分割获取初始区域（在小图上）
         color_mask = self._segment_by_color_enhanced(work_img, work_img)[1]
 
         if color_mask is None:
@@ -138,7 +128,6 @@ class RockSegmenter:
             else:
                 x, y, rw, rh = w//4, h//4, w//2, h//2
 
-        # 确保 rect 宽高至少为 2，避免 OpenCV 异常或卡死
         rw = max(2, min(rw, w - x))
         rh = max(2, min(rh, h - y))
         x = min(x, w - rw)
@@ -149,7 +138,6 @@ class RockSegmenter:
         bgd_model = np.zeros((1, 65), np.float64)
         fgd_model = np.zeros((1, 65), np.float64)
 
-        # 3 次迭代，配合缩放下速度稳定、不易卡顿
         cv2.grabCut(work_img, mask, rect, bgd_model, fgd_model, 3, cv2.GC_INIT_WITH_RECT)
 
         mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8') * 255
@@ -164,21 +152,16 @@ class RockSegmenter:
         return segmented, mask2, score
     
     def _segment_by_color_enhanced(self, processed, original):
-        """增强的颜色分割（针对岩石优化，扩展颜色范围提高成功率）"""
         hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
         
-        # 岩石常见颜色范围（更宽泛，覆盖更多样本）
-        # 棕色/黄褐色
         lower_brown1 = np.array([8, 25, 15])
         upper_brown1 = np.array([35, 255, 255])
         mask_brown1 = cv2.inRange(hsv, lower_brown1, upper_brown1)
         
-        # 灰色/灰白色
         lower_gray = np.array([0, 0, 25])
         upper_gray = np.array([180, 55, 220])
         mask_gray = cv2.inRange(hsv, lower_gray, upper_gray)
         
-        # 红色/橙红色
         lower_red1 = np.array([0, 40, 40])
         upper_red1 = np.array([12, 255, 255])
         lower_red2 = np.array([165, 40, 40])
@@ -188,93 +171,67 @@ class RockSegmenter:
             cv2.inRange(hsv, lower_red2, upper_red2)
         )
         
-        # 黄绿色（部分岩石）
         lower_yg = np.array([35, 30, 30])
         upper_yg = np.array([85, 255, 255])
         mask_yg = cv2.inRange(hsv, lower_yg, upper_yg)
         
-        # 合并所有掩码
         mask = cv2.bitwise_or(mask_brown1, mask_gray)
         mask = cv2.bitwise_or(mask, mask_red)
         mask = cv2.bitwise_or(mask, mask_yg)
-        
-        # 后处理
         mask = self._postprocess_mask_enhanced(mask)
         
-        # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
-        
-        # 评估
         score = self._evaluate_segmentation_enhanced(mask)
         
         return segmented, mask, score
     
     def _segment_by_edges_enhanced(self, processed, original):
-        """增强的边缘检测分割"""
-        # 转换为灰度
         gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
         
-        # 多尺度边缘检测
         edges1 = cv2.Canny(gray, 30, 100)
         edges2 = cv2.Canny(gray, 50, 150)
         edges = cv2.bitwise_or(edges1, edges2)
         
-        # 形态学操作连接边缘
         kernel = np.ones((5, 5), np.uint8)
         closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel, iterations=2)
         
-        # 填充轮廓
         contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         mask = np.zeros_like(gray)
         
-        # 填充轮廓（优先大轮廓，若无则用最大轮廓）
         large_contours = [c for c in contours if cv2.contourArea(c) > 500]
         fill_list = large_contours if large_contours else (contours and [max(contours, key=cv2.contourArea)] or [])
         for contour in fill_list:
             cv2.fillPoly(mask, [contour], 255)
         
-        # 后处理
         mask = self._postprocess_mask_enhanced(mask)
         
-        # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
-        
-        # 评估
         score = self._evaluate_segmentation_enhanced(mask)
         
         return segmented, mask, score
     
     def _segment_by_threshold_enhanced(self, processed, original):
-        """自适应阈值分割"""
         gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
         
-        # 自适应阈值
         adaptive_thresh = cv2.adaptiveThreshold(
             gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
             cv2.THRESH_BINARY_INV, 11, 2
         )
-        
-        # 形态学操作
         kernel = np.ones((5, 5), np.uint8)
         mask = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
         
-        # 后处理
         mask = self._postprocess_mask_enhanced(mask)
         
-        # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
         
-        # 评估
         score = self._evaluate_segmentation_enhanced(mask)
         
         return segmented, mask, score
     
     def _segment_by_watershed(self, processed, original):
-        """分水岭分割（增加 Otsu 失败时的回退）"""
         gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
         
-        # 阈值处理（Otsu 对低对比度图可能失效，尝试中值回退）
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         fg_ratio = np.sum(thresh > 0) / thresh.size
         if fg_ratio < 0.02 or fg_ratio > 0.98:  # Otsu 结果异常

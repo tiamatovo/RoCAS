@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoCAS 帮助文档</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; margin: 0; padding: 0; background: #f8f9fa; color: #333; }
+.nav { background: #2c3e50; color: #fff; padding: 15px 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.nav h1 { margin: 0; font-size: 1.5em; }
+.container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+.section { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.section h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-top: 0; }
+.section h3 { color: #34495e; margin-top: 18px; }
+.section ul { line-height: 1.8; }
+.section code { background: #ecf0f1; padding: 2px 6px; border-radius: 4px; }
+.footer { text-align: center; color: #7f8c8d; font-size: 12px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="nav"><h1>RoCAS 岩石颜色分析系统 - 帮助文档</h1></div>
+<div class="container">
+<section class="section"><h2>一、单张图片</h2>
+<h3>1.1 加载与保存</h3>
+<ul><li>加载图片：通过工具栏或菜单加载单张岩石图像</li>
+<li>保存：将当前显示的图片保存到本地</li>
+<li>裁剪：支持矩形裁剪区域，Enter 确认裁剪</li>
+<li>翻转/旋转：支持图片的翻转与旋转</li></ul>
+<h3>1.2 图像分割</h3>
+<ul><li>选择分割算法：GrabCut、颜色阈值、边缘检测、自适应阈值、分水岭、K-means 等</li>
+<li>可多选算法，在设置中可配置默认算法及“不再提醒”</li>
+<li>分割结果预览：原图、分割图、掩码并排显示</li>
+<li>高DPI导出：支持 300/600/1200 DPI，用于论文发表</li></ul>
+<h3>1.3 颜色识别</h3>
+<ul><li>颜色分析：对单张图片进行颜色智能识别，支持颜色数据库或训练模型</li>
+<li>预测颜色：使用训练模型进行颜色预测，需在设置中配置模型路径</li>
+<li>3D 图、直方图：可导出用于论文</li>
+<li>识别结果导出：导出 Excel 等格式</li></ul>
+</section>
+<section class="section"><h2>二、数据集</h2>
+<h3>2.1 加载</h3>
+<ul><li>加载数据集文件夹：选择包含岩石图像的根目录</li>
+<li>加载后自动切换到数据集标签页</li></ul>
+<h3>2.2 统计信息</h3>
+<ul><li>显示图片总数、格式分布、子目录统计等</li>
+<li>表格内容支持右键复制</li></ul>
+<h3>2.3 文件结构</h3>
+<ul><li>树形展示数据集目录结构</li></ul>
+<h3>2.4 图片预览</h3>
+<ul><li>Ctrl+点击：多选/取消选中</li>
+<li>Shift+点击：范围选择</li>
+<li>Ctrl+A：全选</li>
+<li>双击：放大查看</li>
+<li>对选中图像进行分割：对选中的图片进行批量分割</li></ul>
+</section>
+<section class="section"><h2>三、图像分割</h2>
+<h3>3.1 单图分割</h3>
+<ul><li>在单张图片标签页加载图片后，点击“图像分割”</li></ul>
+<h3>3.2 批量分割</h3>
+<ul><li>加载数据集后点击“图像分割”：可选择“批量分割（全部图像）”或“单图分割”</li>
+<li>或在图片预览中选中若干图片，点击“对选中图像进行分割”</li></ul>
+<h3>3.3 分割算法</h3>
+<ul><li>GrabCut、颜色阈值、Canny 边缘、自适应阈值、分水岭、K-means</li>
+<li>在 设置 → 分割算法设置 中可配置默认算法</li></ul>
+</section>
+<section class="section"><h2>四、机器学习</h2>
+<h3>4.1 训练数据准备</h3>
+<ul><li>从数据集生成训练/验证/测试 CSV 及对应目录</li>
+<li>支持按子文件夹或手动标注生成标签</li></ul>
+<h3>4.2 模型训练</h3>
+<ul><li>选择模型：ResNet、EfficientNet、MobileNet、Custom CNN</li>
+<li>配置训练集/验证集路径、epochs、batch size、早停耐心值</li>
+<li>支持一键选择上次选择的文件夹</li>
+<li>训练日志同步到主窗口，支持按功能分文件保存</li></ul>
+<h3>4.3 模型评估</h3>
+<ul><li>加载评估报告目录，查看混淆矩阵、分类报告、错误样本</li></ul>
+</section>
+<section class="section"><h2>五、设置</h2>
+<h3>5.1 DPI 设置</h3>
+<ul><li>300/600/1200 DPI，用于导出图片的清晰度</li></ul>
+<h3>5.2 导出设置</h3>
+<ul><li>标题显示、文件名格式、SCI 配色主题</li></ul>
+<h3>5.3 分割算法设置</h3>
+<ul><li>默认分割算法、是否每次提醒</li></ul>
+<h3>5.4 分割模型（深度学习）</h3>
+<ul><li>U-Net 模型路径、GPU 开关、训练入口</li></ul>
+<h3>5.5 颜色识别模型</h3>
+<ul><li>分类模型路径、是否使用模型进行识别</li></ul>
+<h3>5.6 日志设置</h3>
+<ul><li>自动保存、保存路径、命名规则（计算机名+日期）</li></ul>
+<h3>5.7 机器学习设置</h3>
+<ul><li>TensorBoard 开关、端口、日志目录</li></ul>
+</section>
+<section class="section"><h2>六、其他</h2>
+<ul><li>功能说明：设置 → 功能说明，在软件内打开可复制对话框（F1）</li>
+<li>界面捕获：工具栏截图，保存当前界面为高清图片</li>
+<li>各子窗口支持截图功能</li>
+<li>帮助文档：F1 或 帮助→帮助文档 打开</li>
+<li>帮助：工具栏按钮，可选择功能说明（软件内）或帮助文档（浏览器）</li>
+<li>功能说明：帮助→功能说明 或 设置→功能说明，在软件内打开可复制对话框</li></ul>
+</section>
+<div class="footer">RoCAS v2.20 | Rock Color Analysis System</div>
+</div>
+</body>
+</html>
