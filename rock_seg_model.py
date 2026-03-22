@@ -1,19 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-U-Net 岩石分割模型加载与推理工具。
-
-说明：
-- 训练脚本 `run_unet_training.py` 使用的是一个简化版 U-Net，并以
-  `torch.save({"model_state": model.state_dict()}, save_path)` 的形式保存权重。
-- 本文件实现与训练脚本**完全一致**的网络结构，以及：
-    - `load_seg_model(ckpt_path, device)`：加载模型与权重；
-    - `infer_mask(model, device, bgr_image, input_size=256)`：对单张 BGR 图像进行前景掩码预测。
-"""
-
 import os
 from typing import Tuple, Optional
 
 import numpy as np
+import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -36,7 +25,6 @@ class DoubleConv(nn.Module):
 
 
 class UNet(nn.Module):
-    """与 run_unet_training.py 中的 UNet 结构保持一致。"""
 
     def __init__(self, in_ch: int = 3, out_ch: int = 1) -> None:
         super().__init__()
@@ -72,12 +60,6 @@ class UNet(nn.Module):
 
 
 def load_seg_model(ckpt_path: str, device: str = "cpu") -> Optional[Tuple[nn.Module, torch.device]]:
-    """
-    加载 U-Net 分割模型。
-
-    返回:
-        (model, device) 或 None（加载失败）
-    """
     if not ckpt_path or not os.path.isfile(ckpt_path):
         return None
 
@@ -89,10 +71,8 @@ def load_seg_model(ckpt_path: str, device: str = "cpu") -> Optional[Tuple[nn.Mod
 
     state = None
     if isinstance(ckpt, dict):
-        # 训练脚本保存为 {"model_state": state_dict}
         if "model_state" in ckpt and isinstance(ckpt["model_state"], dict):
             state = ckpt["model_state"]
-        # 兼容直接保存 state_dict 的情况
         elif all(isinstance(k, str) for k in ckpt.keys()):
             state = ckpt
 
@@ -110,34 +90,23 @@ def load_seg_model(ckpt_path: str, device: str = "cpu") -> Optional[Tuple[nn.Mod
 
 
 def _preprocess_image_for_unet(bgr: np.ndarray, size: int = 256) -> torch.Tensor:
-    """将 BGR numpy 图像预处理为 U-Net 输入张量。"""
-    # BGR -> RGB，归一化到 [0,1]
     rgb = bgr[:, :, ::-1].astype(np.float32) / 255.0
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
     rgb = (rgb - mean) / std
 
-    # resize 到网络输入尺寸
-    import cv2  # 局部导入，避免训练环境无 cv2 时出错
-
     resized = cv2.resize(rgb, (size, size), interpolation=cv2.INTER_LINEAR)
-    # HWC -> CHW
     chw = resized.transpose(2, 0, 1)
     tensor = torch.from_numpy(chw).unsqueeze(0).float()
     return tensor
 
 
 def infer_mask(model: nn.Module, device: torch.device, bgr_image: np.ndarray, input_size: int = 256) -> Optional[np.ndarray]:
-    """
-    对单张 BGR 图像进行前景掩码预测。
 
-    返回:
-        uint8 掩码，前景为 255，背景为 0；若失败返回 None。
-    """
     if bgr_image is None or bgr_image.size == 0:
         return None
 
-    import cv2  # 局部导入
+    import cv2
 
     h, w = bgr_image.shape[:2]
     try:

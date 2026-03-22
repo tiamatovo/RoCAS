@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoCAS Help Documentation</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: "Segoe UI", Tahoma, sans-serif; margin: 0; padding: 0; background: #f8f9fa; color: #333; }
+.nav { background: #2c3e50; color: #fff; padding: 15px 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.nav h1 { margin: 0; font-size: 1.5em; }
+.container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+.section { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.section h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-top: 0; }
+.section h3 { color: #34495e; margin-top: 18px; }
+.section ul { line-height: 1.8; }
+.section code { background: #ecf0f1; padding: 2px 6px; border-radius: 4px; }
+.footer { text-align: center; color: #7f8c8d; font-size: 12px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="nav"><h1>RoCAS: Rock Color Analysis System - Help Documentation</h1></div>
+<div class="container">
+<section class="section"><h2>I. Single Image Analysis</h2>
+<h3>1.1 Loading & Saving</h3>
+<ul><li><b>Load Image:</b> Import a single rock image via the toolbar or menu.</li>
+<li><b>Save:</b> Export the current display image to your local drive.</li>
+<li><b>Crop:</b> Supports rectangular ROI (Region of Interest) cropping; press <code>Enter</code> to confirm.</li>
+<li><b>Flip/Rotate:</b> Standard image orientation adjustments.</li></ul>
+<h3>1.2 Image Segmentation</h3>
+<ul><li><b>Algorithm Selection:</b> Includes GrabCut, Color Thresholding, Edge Detection, Adaptive Thresholding, Watershed, K-means, etc.</li>
+<li><b>Multi-selection:</b> Combine algorithms; default settings can be configured in "Settings."</li>
+<li><b>Preview:</b> Side-by-side comparison of Original, Segmented, and Mask images.</li>
+<li><b>High-DPI Export:</b> Supports 300/600/1200 DPI for high-quality SCI journal publication.</li></ul>
+<h3>1.3 Color Identification</h3>
+<ul><li><b>Color Analysis:</b> Intelligent identification using color databases or pre-trained models.</li>
+<li><b>Color Prediction:</b> Utilizes DL models for prediction (configure model path in Settings).</li>
+<li><b>Visualization:</b> Export 3D color space plots and histograms for research papers.</li>
+<li><b>Data Export:</b> Save identification results in professional Excel/CSV formats.</li></ul>
+</section>
+
+<section class="section"><h2>II. Dataset Management</h2>
+<h3>2.1 Loading Datasets</h3>
+<ul><li><b>Load Folder:</b> Select the root directory containing rock image batches.</li>
+<li><b>Auto-Switch:</b> The system automatically switches to the "Dataset" tab upon loading.</li></ul>
+<h3>2.2 Statistics</h3>
+<ul><li><b>Summary:</b> Displays total count, format distribution, and subdirectory statistics.</li>
+<li><b>Data Interaction:</b> Table content supports right-click copying.</li></ul>
+<h3>2.3 File Structure</h3>
+<ul><li><b>Tree View:</b> Visual representation of the dataset's directory hierarchy.</li></ul>
+<h3>2.4 Image Preview</h3>
+<ul><li><b>Selection:</b> <code>Ctrl+Click</code> (Multi-select), <code>Shift+Click</code> (Range-select), <code>Ctrl+A</code> (Select All).</li>
+<li><b>Double Click:</b> Enlarge image for detailed inspection.</li>
+<li><b>Batch Processing:</b> Apply segmentation to all selected images simultaneously.</li></ul>
+</section>
+
+<section class="section"><h2>III. Image Segmentation Workflow</h2>
+<h3>3.1 Single Segmentation</h3>
+<ul><li>Load an image in the "Single Image" tab and click "Image Segmentation."</li></ul>
+<h3>3.2 Batch Segmentation</h3>
+<ul><li><b>Full Batch:</b> Run segmentation on all images in a loaded dataset.</li>
+<li><b>Selected Batch:</b> Run segmentation only on images highlighted in the preview.</li></ul>
+<h3>3.3 Algorithm Config</h3>
+<ul><li>Available: GrabCut, Color Threshold, Canny Edge, Adaptive Threshold, Watershed, K-means.</li>
+<li>Default algorithm logic can be set in <b>Settings → Segmentation Settings</b>.</li></ul>
+</section>
+
+<section class="section"><h2>IV. Machine Learning Pipeline</h2>
+<h3>4.1 Data Preparation</h3>
+<ul><li>Generate Train/Val/Test CSV files and corresponding directories from datasets.</li>
+<li>Supports auto-labeling based on subfolders or manual annotation.</li></ul>
+<h3>4.2 Model Training</h3>
+<ul><li><b>Architectures:</b> ResNet, EfficientNet, MobileNet, and Custom CNN.</li>
+<li><b>Parameters:</b> Configure Paths, Epochs, Batch Size, and Early Stopping patience.</li>
+<li><b>Directory Persistence:</b> One-click selection of recently used folders.</li>
+<li><b>Logging:</b> Real-time training logs synced to the main window and saved by function.</li></ul>
+<h3>4.3 Model Evaluation</h3>
+<ul><li>Load evaluation reports to view Confusion Matrices, Classification Reports, and Error Samples.</li></ul>
+</section>
+
+<section class="section"><h2>V. Settings & Configuration</h2>
+<h3>5.1 DPI Resolution</h3>
+<ul><li>Choose between 300/600/1200 DPI for professional publication standards.</li></ul>
+<h3>5.2 Export Preferences</h3>
+<ul><li>Configure Title visibility, Filename formats, and SCI Color Themes.</li></ul>
+<h3>5.3 Segmentation Logic</h3>
+<ul><li>Set default algorithms and toggle "Reminder" notifications.</li></ul>
+<h3>5.4 Segmentation Model (Deep Learning)</h3>
+<ul><li>U-Net model path configuration, GPU acceleration toggle, and Training entry.</li></ul>
+<h3>5.5 Identification Model</h3>
+<ul><li>Classification model paths and toggle switch for model-based recognition.</li></ul>
+<h3>5.6 Logging & Maintenance</h3>
+<ul><li>Auto-save settings, custom paths, and naming rules (HostName + Date).</li></ul>
+<h3>5.7 ML Environment</h3>
+<ul><li>TensorBoard integration, port configuration, and log directory management.</li></ul>
+</section>
+
+<section class="section"><h2>VI. Miscellaneous</h2>
+<ul><li><b>Functional Descriptions:</b> Accessible via Settings or <code>F1</code> for copyable dialogs.</li>
+<li><b>UI Capture:</b> Toolbar screenshot tool for capturing high-definition interface images.</li>
+<li><b>Sub-window Support:</b> Individual modules support independent screen captures.</li>
+<li><b>Help:</b> <code>F1</code> or <b>Help → Documentation</b> for browser-based help.</li></ul>
+</section>
+<div class="footer">RoCAS v2.20 | Rock Color Analysis System</div>
+</div>
+</body>
+</html>
