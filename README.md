@@ -2,13 +2,15 @@
 RoCAS: A Deep Learning-Driven Framework for Intelligent Rock Color Identification via U-Net and Multi-Feature Fusion Strategy. Optimized for geological research, providing high-precision Munsell HVC mapping from field imagery.
 
 ## GUI
+<<<<<<< HEAD
 
-![RoCAS GUI](https://imags-563.pages.dev/file/AgACAgUAAxkDAAIBKGm_wJWGCNtlCg25fVCI6jv1EwzoAAL6DmsbBsgBVqi34eud9kufAQADAgADeQADOgQ.png)
+![RoCAS GUI](./resources/assets/images/readme/RoCAS%20GUI.png)
 
-![Load Image GUI](https://imags-563.pages.dev/file/AgACAgUAAxkDAAIBK2m_2IUOUH74bok-k6JBQpC_7DCHAAJQD2sbBsgBVgz3B-3u48ZdAQADAgADeQADOgQ.png)
+![Load Image GUI](./resources/assets/images/readme/Load%20Image%20GUI.png)
 
 ## About
 
 ##### Author: Txy
 
 ##### Email: dachang0220@163.com
+>>>>>>> dachang
