@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 import os
 from typing import Tuple, Optional
 
 import numpy as np
+import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,6 +25,7 @@ class DoubleConv(nn.Module):
 
 
 class UNet(nn.Module):
+
     def __init__(self, in_ch: int = 3, out_ch: int = 1) -> None:
         super().__init__()
         self.enc1 = DoubleConv(in_ch, 64)
@@ -94,8 +95,6 @@ def _preprocess_image_for_unet(bgr: np.ndarray, size: int = 256) -> torch.Tensor
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
     rgb = (rgb - mean) / std
 
-    import cv2 
-
     resized = cv2.resize(rgb, (size, size), interpolation=cv2.INTER_LINEAR)
     chw = resized.transpose(2, 0, 1)
     tensor = torch.from_numpy(chw).unsqueeze(0).float()
@@ -103,6 +102,7 @@ def _preprocess_image_for_unet(bgr: np.ndarray, size: int = 256) -> torch.Tensor
 
 
 def infer_mask(model: nn.Module, device: torch.device, bgr_image: np.ndarray, input_size: int = 256) -> Optional[np.ndarray]:
+
     if bgr_image is None or bgr_image.size == 0:
         return None
 

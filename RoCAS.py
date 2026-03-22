@@ -30,7 +30,6 @@ from PyQt6.QtGui import QPixmap, QImage, QAction, QDesktopServices, QIcon, QClos
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, QUrl, QBuffer, QIODevice, QSettings, QRect, QPoint, QTimer
 
 
-# ========== 单个单色识别线程 ==========
 class ColorAnalysisWorker(QThread):
     progress_updated = pyqtSignal(int)
     result_ready = pyqtSignal(str, list, int)
@@ -46,14 +45,11 @@ class ColorAnalysisWorker(QThread):
 
     def run(self):
         try:
-            # 1. 图像预处理
             self.progress_updated.emit(0)
 
-            # 亮度归一化
-            img_normalized = self.normalize_brightness(self.image)  # 修复：使用实例方法
+            img_normalized = self.normalize_brightness(self.image)
             self.progress_updated.emit(10)
 
-            # 缩放处理
             scale_factor = 0.5
             img_resized = cv2.resize(
                 img_normalized,
@@ -67,7 +63,6 @@ class ColorAnalysisWorker(QThread):
             x_range = width - half_grid
             y_range = height - half_grid
 
-            # 2. 提取颜色向量
             color_vectors = []
             total_steps = (x_range - half_grid) * (y_range - half_grid)
             current_step = 0
@@ -78,32 +73,28 @@ class ColorAnalysisWorker(QThread):
                                   i - half_grid:i + half_grid + 1]
 
                     if self.grid_size < 15:
-                        color_values = self.arithmetic_mean(grid_pixels)  # 修复：使用实例方法
+                        color_values = self.arithmetic_mean(grid_pixels)
                     else:
-                        color_values = self.weighted_mean(grid_pixels, self.grid_size)  # 修复：使用实例方法
+                        color_values = self.weighted_mean(grid_pixels, self.grid_size)
 
                     color_vectors.append(color_values)
 
                     current_step += 1
-                    # 每处理100个点更新一次进度（25-65%）
                     if current_step % 100 == 0:
                         progress = 25 + int((current_step / total_steps) * 40)
                         self.progress_updated.emit(progress)
 
             self.progress_updated.emit(65)
 
-            # 3. 颜色匹配
             color_frequency, color_matches = self.find_closest_color(color_vectors)
             total_vectors = len(color_vectors)
 
-            # 4. 构建统计结果
             structured_stats = []
             sorted_colors = sorted(color_frequency.items(), key=lambda x: x[1], reverse=True)
 
             for idx, ((color_name, color_code), count) in enumerate(sorted_colors):
                 percentage = (count / total_vectors) * 100
 
-                # 获取该颜色下的所有目标向量
                 relevant_matches = [m for m in color_matches
                                     if m["color_name"] == color_name and m["color_code"] == color_code]
 
@@ -124,30 +115,26 @@ class ColorAnalysisWorker(QThread):
                     "target_vec": avg_target_vec
                 })
 
-                # 每处理10种颜色更新一次进度（65-95%）
                 if idx % 10 == 0:
                     progress = 65 + int((idx / len(sorted_colors)) * 30)
                     self.progress_updated.emit(progress)
 
             self.progress_updated.emit(95)
 
-            # 5. 生成文本报告
-            report_text = "=== 颜色分析报告 ===\n\n"
+            report_text = "=== color analysis report=\n\n"
             for stat in structured_stats:
                 report_text += f"{stat['name']} ({stat['code']}): {stat['percent']:.2f}%\n"
 
-            # 6. 发送结果信号
             self.result_ready.emit(report_text, structured_stats, total_vectors)
             self.progress_updated.emit(100)
 
         except Exception as e:
-            error_msg = f"分析过程中发生错误:\n{str(e)}\n\n详细追踪:\n{traceback.format_exc()}"
+            error_msg = f"error:\n{str(e)}\n\ndetail:\n{traceback.format_exc()}"
             self.error_occurred.emit(error_msg)
 
     def normalize_brightness(self, img):
-        """对图像进行亮度均衡化，增强颜色识别稳定性"""
         img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-        img_yuv[:, :, 0] = cv2.equalizeHist(img_yuv[:, :, 0])  # 均衡化亮度通道
+        img_yuv[:, :, 0] = cv2.equalizeHist(img_yuv[:, :, 0])
         return cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
     @staticmethod
@@ -224,7 +211,6 @@ class ColorAnalysisWorker(QThread):
         return color_frequency, color_matches
 
 
-# ========== 绘图工具 ==========
 class MatplotlibWindow(QMainWindow):
     """通用的 Matplotlib 独立窗口，自带工具栏（保存、缩放、移动）"""
 
@@ -288,9 +274,7 @@ class MatplotlibWindow(QMainWindow):
         self.canvas.draw()
 
 
-# ========== 点击查看大图 ==========
 class ImageViewerWindow(QMainWindow):
-    """通用大图查看窗口：支持缩放"""
 
     def __init__(self, image_path, parent=None):
         super().__init__(parent)
@@ -378,7 +362,6 @@ class ImageViewerWindow(QMainWindow):
                 QDesktopServices.openUrl(QUrl.fromLocalFile(folder_path))
 
 
-# ========== 分割算法选择对话框 ==========
 class SegmentationMethodDialog(QDialog):
     """分割算法选择对话框"""
 
@@ -504,7 +487,6 @@ class SegmentationMethodDialog(QDialog):
         return not self.dont_remind_check.isChecked()
 
 
-# ========== 主窗口 ==========
 class ImageEditorApp(QMainWindow):
 
     # ========== 初始化界面和方法 ==========
@@ -2726,7 +2708,6 @@ class ImageEditorApp(QMainWindow):
         return filename
 
 
-# ========== DPI调整并导出类 ==========
 class HighDPIExporter:
     """高DPI图片导出工具类"""
 
@@ -2855,7 +2836,6 @@ class HighDPIExporter:
         return filename
 
 
-# ========== DPI设置对话框 ==========
 class DPISettingsDialog(QDialog):
     """DPI和尺寸设置对话框"""
 
@@ -2946,7 +2926,6 @@ class DPISettingsDialog(QDialog):
         }
 
 
-# ========== 识别结果独立窗口 ==========
 class AnalysisResultWindow(QMainWindow):
     def __init__(self, stats_data, total_samples, file_name, parent=None):
         super().__init__(parent)
@@ -3593,7 +3572,6 @@ class AnalysisResultWindow(QMainWindow):
         self.hist_win.show()
 
 
-# ========== 识别核心算法 ==========
 class ColorRecognizeMethods():
     """颜色识别核心算法"""
 
@@ -3646,7 +3624,6 @@ class ColorRecognizeMethods():
         return dot_product / (magnitude1 * magnitude2) if magnitude1 and magnitude2 else 0
 
 
-# ========== 裁剪区域选择控件 ==========
 class CropRectWidget(QWidget):
     """自定义裁剪区域选择控件"""
     rectChanged = pyqtSignal(QRect)
@@ -4186,7 +4163,6 @@ class CropRectWidget(QWidget):
         self.rectChanged.emit(QRect())
 
 
-# ========== 多个算法预览窗口 ==========
 class MultiMethodSegmentationPreviewWindow(QMainWindow):
     """多算法分割结果预览窗口"""
 
@@ -4413,7 +4389,6 @@ class MultiMethodSegmentationPreviewWindow(QMainWindow):
             QMessageBox.critical(self, "导出错误", f"导出过程中发生错误:\n{str(e)}")
 
 
-# ========== 分割结果预览窗口 ==========
 class SegmentationPreviewWindow(QMainWindow):
     """分割结果预览窗口，包含导出按钮"""
 
@@ -4595,7 +4570,6 @@ class SegmentationPreviewWindow(QMainWindow):
             )
 
 
-# ========== 裁剪窗口 ==========
 class EnhancedCropWindow(QMainWindow):
     """增强版裁剪窗口（完整实现）"""
     cropConfirmed = pyqtSignal(QRect)
@@ -5057,7 +5031,6 @@ class EnhancedCropWindow(QMainWindow):
             event.accept()
 
 
-# ========== 批量分割Worker ==========
 class BatchSegmentationWorker(QThread):
     """批量分割工作线程"""
     progress_updated = pyqtSignal(int, str)  # 进度, 当前文件
@@ -5178,7 +5151,6 @@ class BatchSegmentationWorker(QThread):
         self.is_running = False
 
 
-# ========== 批量分割对话框 ==========
 class BatchSegmentationDialog(QDialog):
     """批量分割对话框"""
 
@@ -5399,8 +5371,7 @@ class BatchSegmentationDialog(QDialog):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
-    # 解决 Matplotlib 中文乱码
-    matplotlib.use('QtAgg')  # 声明使用 Qt 后端
+    matplotlib.use('QtAgg')
     matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei']
     matplotlib.rcParams['axes.unicode_minus'] = False
 
