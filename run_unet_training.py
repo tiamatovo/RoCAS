@@ -86,7 +86,7 @@ def main():
     MASK_EXTS = ('.png', '.tif', '.tiff')
     size = 128 if args.cpu else 256
     if args.cpu:
-        log("CPU 训练使用输入尺寸 128×128 以降低内存占用")
+        log("CPU size 128×128 !")
 
     imgs, masks = [], []
     search_dirs = [args.mask_dir] if args.mask_dir else []
@@ -111,7 +111,7 @@ def main():
                     break
 
     if len(imgs) < 10:
-        log(f"有效样本不足（需至少10对），当前: {len(imgs)}。")
+        log(f"need 10 size at least!，current: {len(imgs)}。")
         sys.exit(1)
 
     class DS(Dataset):
@@ -134,25 +134,25 @@ def main():
 
     if args.cpu:
         device = torch.device("cpu")
-        log("训练使用 CPU（已忽略 GPU）")
+        log("use CPU（not GPU）")
         batch_size = min(args.batch_size, 2)
         if batch_size < args.batch_size:
-            log(f"CPU 训练为防内存不足，batch_size 已由 {args.batch_size} 降为 {batch_size}")
+            log(f"batch_size form {args.batch_size} down to {batch_size}")
     else:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         batch_size = args.batch_size
-    log("正在创建 DataLoader...")
+    log("creating DataLoader...")
     loader = DataLoader(DS(), batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=False)
-    log("正在创建模型...")
+    log("creating model...")
     model = UNet(3, 1).to(device)
     opt = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
-    log("开始训练...")
+    log("start traing...")
     it = iter(loader)
     imgs_b, masks_b = next(it)
     imgs_b, masks_b = imgs_b.to(device), masks_b.to(device)
     with torch.no_grad():
         _ = model(imgs_b)
-    log("预热(仅前向)完成，开始正式训练...")
+    log("pre-start completely！")
     import json
     train_losses = []
     for ep in range(args.epochs):
@@ -172,14 +172,14 @@ def main():
         log(f"Epoch {ep+1}/{args.epochs} loss={avg:.4f}")
     os.makedirs(os.path.dirname(args.save_path) or '.', exist_ok=True)
     torch.save({"model_state": model.state_dict()}, args.save_path)
-    log(f"模型已保存: {args.save_path}")
+    log(f"model save to: {args.save_path}")
     history_path = args.save_path.rsplit(".", 1)[0] + "_history.json"
     try:
         with open(history_path, "w", encoding="utf-8") as f:
             json.dump({"train_loss": train_losses, "epochs": len(train_losses)}, f, indent=2)
-        log(f"训练曲线已保存: {history_path}")
+        log(f"train curve: {history_path}")
     except Exception as e:
-        log(f"保存训练曲线失败: {e}")
+        log(f"save curve fail: {e}")
     sys.exit(0)
 
 
