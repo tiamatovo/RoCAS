@@ -6,12 +6,15 @@ from datetime import datetime
 from collections import Counter
 import json
 
+import torch
+
 
 class RockSegmenter:
     def __init__(self, log_callback=None):
         self.segmentation_methods_used = {}
-        self.log_callback = log_callback 
+        self.log_callback = log_callback  # 日志回调函数
 
+        # 中文方法名称映射
         self.method_names = {
             'grabcut': 'GrabCut智能分割',
             'color': '颜色阈值分割',
@@ -29,12 +32,14 @@ class RockSegmenter:
         self._dl_use_gpu = True
 
     def log(self, message):
+        """日志输出"""
         if self.log_callback:
             self.log_callback(message)
         else:
             print(f"[Segmenter] {message}")
 
     def segment_by_methods(self, image, image_name, selected_methods, log_callback=None):
+        """使用选定的方法进行分割，返回所有方法的结果"""
         if log_callback:
             self.log_callback = log_callback
         
@@ -45,6 +50,7 @@ class RockSegmenter:
         self.log(f"图像尺寸: {image.shape[1]}×{image.shape[0]}")
         self.log(f"选择的分割方法: {', '.join(selected_methods)}")
         
+        # 图像预处理
         processed = self._preprocess_image_enhanced(image)
         self.log("✓ 图像预处理完成（降噪、增强对比度）")
         
@@ -52,19 +58,19 @@ class RockSegmenter:
             try:
                 self.log(f"\n--- 执行 {method_name} 分割 ({method_idx}/{len(selected_methods)}) ---")
                 
-                if method_name == 'GrabCut智能分割':
+                if method_name == 'GrabCut Intelligent Segmentation':
                     segmented, mask, score = self._segment_by_grabcut_enhanced(processed, original)
-                elif method_name == '颜色阈值分割':
+                elif method_name == 'Color Threshold Segmentation':
                     segmented, mask, score = self._segment_by_color_enhanced(processed, original)
-                elif method_name == '边缘检测分割':
+                elif method_name == 'Edge Detection Segmentation':
                     segmented, mask, score = self._segment_by_edges_enhanced(processed, original)
-                elif method_name == '自适应阈值分割':
+                elif method_name == 'Adaptive Threshold Segmentation':
                     segmented, mask, score = self._segment_by_threshold_enhanced(processed, original)
-                elif method_name == '分水岭分割':
+                elif method_name == 'Watershed Segmentation':
                     segmented, mask, score = self._segment_by_watershed(processed, original)
-                elif method_name == 'K-means聚类分割':
+                elif method_name == 'K-means Clustering Segmentation':
                     segmented, mask, score = self._segment_by_kmeans(processed, original)
-                elif method_name == '深度学习分割':
+                elif method_name == 'Deep Learning Segmentation':
                     segmented, mask, score = self._segment_by_deeplearning(processed, original)
                 else:
                     continue
@@ -86,19 +92,23 @@ class RockSegmenter:
                 self.log(traceback.format_exc())
         
         self.log(f"\n分割完成，成功方法数: {len(results)}/{len(selected_methods)}")
-        return results   
-        
+        return results
+
     def _preprocess_image_enhanced(self, image):
+        """增强的图像预处理"""
+        # 1. 降噪
         denoised = cv2.bilateralFilter(image, 9, 75, 75)
-        
+
+        # 2. 增强对比度（CLAHE）
         lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         lab[:, :, 0] = clahe.apply(lab[:, :, 0])
         enhanced = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
-        
+
         return enhanced
-    
+
     def _segment_by_grabcut_enhanced(self, processed, original):
+        """增强的GrabCut分割（大图缩放到 600 内 + 少迭代，避免卡在首图）"""
         h_orig, w_orig = processed.shape[:2]
         max_side = 600
         scale = 1.0
@@ -111,6 +121,7 @@ class RockSegmenter:
             work_img = processed
 
         h, w = work_img.shape[:2]
+        # 使用颜色分割获取初始区域（在小图上）
         color_mask = self._segment_by_color_enhanced(work_img, work_img)[1]
 
         if color_mask is None:
@@ -128,6 +139,7 @@ class RockSegmenter:
             else:
                 x, y, rw, rh = w//4, h//4, w//2, h//2
 
+        # 确保 rect 宽高至少为 2，避免 OpenCV 异常或卡死
         rw = max(2, min(rw, w - x))
         rh = max(2, min(rh, h - y))
         x = min(x, w - rw)
@@ -138,6 +150,7 @@ class RockSegmenter:
         bgd_model = np.zeros((1, 65), np.float64)
         fgd_model = np.zeros((1, 65), np.float64)
 
+        # 3 次迭代，配合缩放下速度稳定、不易卡顿
         cv2.grabCut(work_img, mask, rect, bgd_model, fgd_model, 3, cv2.GC_INIT_WITH_RECT)
 
         mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8') * 255
@@ -150,18 +163,23 @@ class RockSegmenter:
         segmented = self._apply_mask_enhanced(original, mask2)
         score = self._evaluate_segmentation_enhanced(mask2)
         return segmented, mask2, score
-    
+
     def _segment_by_color_enhanced(self, processed, original):
+        """增强的颜色分割（针对岩石优化，扩展颜色范围提高成功率）"""
         hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
-        
+
+        # 岩石常见颜色范围（更宽泛，覆盖更多样本）
+        # 棕色/黄褐色
         lower_brown1 = np.array([8, 25, 15])
         upper_brown1 = np.array([35, 255, 255])
         mask_brown1 = cv2.inRange(hsv, lower_brown1, upper_brown1)
-        
+
+        # 灰色/灰白色
         lower_gray = np.array([0, 0, 25])
         upper_gray = np.array([180, 55, 220])
         mask_gray = cv2.inRange(hsv, lower_gray, upper_gray)
-        
+
+        # 红色/橙红色
         lower_red1 = np.array([0, 40, 40])
         upper_red1 = np.array([12, 255, 255])
         lower_red2 = np.array([165, 40, 40])
@@ -170,125 +188,151 @@ class RockSegmenter:
             cv2.inRange(hsv, lower_red1, upper_red1),
             cv2.inRange(hsv, lower_red2, upper_red2)
         )
-        
+
+        # 黄绿色（部分岩石）
         lower_yg = np.array([35, 30, 30])
         upper_yg = np.array([85, 255, 255])
         mask_yg = cv2.inRange(hsv, lower_yg, upper_yg)
-        
+
+        # 合并所有掩码
         mask = cv2.bitwise_or(mask_brown1, mask_gray)
         mask = cv2.bitwise_or(mask, mask_red)
         mask = cv2.bitwise_or(mask, mask_yg)
+
+        # 后处理
         mask = self._postprocess_mask_enhanced(mask)
-        
+
+        # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
+
+        # 评估
         score = self._evaluate_segmentation_enhanced(mask)
-        
+
         return segmented, mask, score
-    
+
     def _segment_by_edges_enhanced(self, processed, original):
+        """增强的边缘检测分割"""
+        # 转换为灰度
         gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
-        
+
+        # 多尺度边缘检测
         edges1 = cv2.Canny(gray, 30, 100)
         edges2 = cv2.Canny(gray, 50, 150)
         edges = cv2.bitwise_or(edges1, edges2)
-        
+
+        # 形态学操作连接边缘
         kernel = np.ones((5, 5), np.uint8)
         closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel, iterations=2)
-        
+
+        # 填充轮廓
         contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         mask = np.zeros_like(gray)
-        
+
+        # 填充轮廓（优先大轮廓，若无则用最大轮廓）
         large_contours = [c for c in contours if cv2.contourArea(c) > 500]
         fill_list = large_contours if large_contours else (contours and [max(contours, key=cv2.contourArea)] or [])
         for contour in fill_list:
             cv2.fillPoly(mask, [contour], 255)
-        
+
+        # 后处理
         mask = self._postprocess_mask_enhanced(mask)
-        
+
+        # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
+
+        # 评估
         score = self._evaluate_segmentation_enhanced(mask)
-        
+
         return segmented, mask, score
-    
+
     def _segment_by_threshold_enhanced(self, processed, original):
+        """自适应阈值分割"""
         gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
-        
+
+        # 自适应阈值
         adaptive_thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV, 11, 2
         )
+
+        # 形态学操作
         kernel = np.ones((5, 5), np.uint8)
         mask = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
-        
+
+        # 后处理
         mask = self._postprocess_mask_enhanced(mask)
-        
+
+        # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
-        
+
+        # 评估
         score = self._evaluate_segmentation_enhanced(mask)
-        
+
         return segmented, mask, score
-    
+
     def _segment_by_watershed(self, processed, original):
+        """分水岭分割（增加 Otsu 失败时的回退）"""
         gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
-        
+
+        # 阈值处理（Otsu 对低对比度图可能失效，尝试中值回退）
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         fg_ratio = np.sum(thresh > 0) / thresh.size
         if fg_ratio < 0.02 or fg_ratio > 0.98:  # Otsu 结果异常
             med = np.median(gray)
             _, thresh = cv2.threshold(gray, med, 255, cv2.THRESH_BINARY_INV)
-        
+
         # 形态学操作
         kernel = np.ones((3, 3), np.uint8)
         opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
-        
+
         # 确定背景区域
         sure_bg = cv2.dilate(opening, kernel, iterations=3)
-        
+
         # 距离变换
         dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
         _, sure_fg = cv2.threshold(dist_transform, 0.7 * dist_transform.max(), 255, 0)
-        
+
         # 未知区域
         sure_fg = np.uint8(sure_fg)
         unknown = cv2.subtract(sure_bg, sure_fg)
-        
+
         # 标记
         _, markers = cv2.connectedComponents(sure_fg)
         markers = markers + 1
         markers[unknown == 255] = 0
-        
+
         # 分水岭算法
         markers = cv2.watershed(processed, markers)
-        
+
         # 创建掩码
         mask = np.zeros(gray.shape, dtype=np.uint8)
         mask[markers > 1] = 255
-        
+
         # 后处理
         mask = self._postprocess_mask_enhanced(mask)
-        
+
         # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
-        
+
         # 评估
         score = self._evaluate_segmentation_enhanced(mask)
-        
+
         return segmented, mask, score
-    
+
     def _segment_by_kmeans(self, processed, original):
         """K-means聚类分割（岩石通常在中心，以中心区域主导的类为前景）"""
         data = processed.reshape((-1, 3))
         data = np.float32(data)
-        
+
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1.0)
         k = 2
         flags = getattr(cv2, 'KMEANS_PP_CENTERS', cv2.KMEANS_RANDOM_CENTERS)
         _, labels, centers = cv2.kmeans(data, k, None, criteria, 10, flags)
-        
+
         labels = labels.reshape(processed.shape[:2])
         h, w = labels.shape
-        
+
         # 中心区域（1/3）的标签投票，选中心主导的类为前景
         cy, cx = h // 2, w // 2
         r = min(h, w) // 6
@@ -297,20 +341,20 @@ class RockSegmenter:
         center_labels = labels[y1:y2, x1:x2].ravel()
         unique, counts = np.unique(center_labels, return_counts=True)
         foreground_label = unique[np.argmax(counts)]
-        
+
         # 创建掩码
         mask = np.zeros(processed.shape[:2], dtype=np.uint8)
         mask[labels == foreground_label] = 255
-        
+
         # 后处理
         mask = self._postprocess_mask_enhanced(mask)
-        
+
         # 应用掩码
         segmented = self._apply_mask_enhanced(original, mask)
-        
+
         # 评估
         score = self._evaluate_segmentation_enhanced(mask)
-        
+
         return segmented, mask, score
 
     def set_dl_config(self, model_path, use_gpu=True):
@@ -322,44 +366,126 @@ class RockSegmenter:
 
     def _load_dl_model(self):
         """懒加载深度学习模型"""
-        if not self._dl_model_path or not os.path.isfile(self._dl_model_path):
+        # 添加调试信息
+        self.log(f"尝试加载深度学习模型，路径: {self._dl_model_path}")
+
+        if not self._dl_model_path:
+            self.log("深度学习分割: 模型路径为空")
             return False
+
+        if not os.path.isfile(self._dl_model_path):
+            self.log(f"深度学习分割: 模型文件不存在 - {self._dl_model_path}")
+            # 检查是否存在其他可能的模型文件
+            model_dir = os.path.dirname(self._dl_model_path)
+            if os.path.exists(model_dir):
+                try:
+                    files = os.listdir(model_dir)
+                    pth_files = [f for f in files if f.lower().endswith(('.pth', '.pt'))]
+                    if pth_files:
+                        self.log(f"深度学习分割: 在目录 {model_dir} 中找到以下可能的模型文件: {pth_files}")
+                except Exception as e:
+                    self.log(f"检查模型目录时出错: {e}")
+            return False
+
         if self._dl_model is not None and self._dl_model_path == getattr(self, '_last_dl_path', None):
+            self.log("深度学习分割: 模型已加载，无需重复加载")
             return True
+
         try:
             from rock_seg_model import load_seg_model
             device = "cuda" if self._dl_use_gpu else "cpu"
+
+            # 检查GPU可用性
+            if self._dl_use_gpu and not torch.cuda.is_available():
+                self.log("警告: CUDA不可用，将使用CPU")
+                device = "cpu"
+
+            self.log(f"深度学习分割: 尝试使用设备 {device} 加载模型")
             result = load_seg_model(self._dl_model_path, device)
             if result is None:
+                self.log("深度学习分割: load_seg_model 函数返回 None，模型加载失败")
                 return False
             self._dl_model, self._dl_device = result
             self._last_dl_path = self._dl_model_path
+            self.log("深度学习分割: 模型加载成功")
             return True
+        except ImportError as e:
+            self.log(f"导入rock_seg_model模块失败: {e}")
+            import traceback
+            self.log(traceback.format_exc())
+            return False
         except Exception as e:
             self.log(f"加载深度学习模型失败: {e}")
+            import traceback
+            self.log(traceback.format_exc())
             return False
 
     def _segment_by_deeplearning(self, processed, original):
         """深度学习 U-Net 语义分割"""
         if not self._load_dl_model():
-            self.log("深度学习分割: 未配置有效模型，请在 设置→分割模型设置 中指定模型路径")
+            # 这里已经通过 _load_dl_model 输出了详细错误信息
+            self.log("深度学习分割: 跳过分割步骤，因为模型未加载成功")
             return None, None, 0.0
         try:
             from rock_seg_model import infer_mask
+            self.log("深度学习分割: 开始推理")
             mask = infer_mask(self._dl_model, self._dl_device, original, input_size=256)
             if mask is None:
+                self.log("深度学习分割: 推理返回空掩码")
                 return None, None, 0.0
+            self.log("深度学习分割: 推理完成，进行后处理")
             mask = self._postprocess_mask_enhanced(mask)
             segmented = self._apply_mask_enhanced(original, mask)
             # 对深度学习分割单独放宽评估条件：
             # 只要模型输出的前景区域非空，就认为分割成功，避免因为面积比例等阈值被全部丢弃
             mask_area = int(np.sum(mask > 0))
             if mask_area <= 0:
+                self.log("深度学习分割: 后处理后的掩码区域为0")
                 score = 0.0
             else:
                 # 仍然调用一次评估函数用于排序/参考，但保证有一个较大的正分
                 base_score = self._evaluate_segmentation_enhanced(mask)
                 score = max(0.8, float(base_score))
+                self.log(f"深度学习分割: 成功，得分 {score}")
+            return segmented, mask, score
+        except ImportError as e:
+            self.log(f"导入rock_seg_model模块失败: {e}")
+            import traceback
+            self.log(traceback.format_exc())
+            return None, None, 0.0
+        except Exception as e:
+            self.log(f"深度学习分割执行出错: {e}")
+            import traceback
+            self.log(traceback.format_exc())
+            return None, None, 0.0
+
+    def _segment_by_deeplearning(self, processed, original):
+        """深度学习 U-Net 语义分割"""
+        if not self._load_dl_model():
+            # 这里已经通过 _load_dl_model 输出了详细错误信息
+            self.log("深度学习分割: 跳过分割步骤，因为模型未加载成功")
+            return None, None, 0.0
+        try:
+            from rock_seg_model import infer_mask
+            self.log("深度学习分割: 开始推理")
+            mask = infer_mask(self._dl_model, self._dl_device, original, input_size=256)
+            if mask is None:
+                self.log("深度学习分割: 推理返回空掩码")
+                return None, None, 0.0
+            self.log("深度学习分割: 推理完成，进行后处理")
+            mask = self._postprocess_mask_enhanced(mask)
+            segmented = self._apply_mask_enhanced(original, mask)
+            # 对深度学习分割单独放宽评估条件：
+            # 只要模型输出的前景区域非空，就认为分割成功，避免因为面积比例等阈值被全部丢弃
+            mask_area = int(np.sum(mask > 0))
+            if mask_area <= 0:
+                self.log("深度学习分割: 后处理后的掩码区域为0")
+                score = 0.0
+            else:
+                # 仍然调用一次评估函数用于排序/参考，但保证有一个较大的正分
+                base_score = self._evaluate_segmentation_enhanced(mask)
+                score = max(0.8, float(base_score))
+                self.log(f"深度学习分割: 成功，得分 {score}")
             return segmented, mask, score
         except Exception as e:
             self.log(f"深度学习分割执行出错: {e}")
@@ -602,12 +728,13 @@ class RockSegmenter:
 
     def _apply_mask(self, image, mask):
         """应用掩码到图像"""
+        # 关键修复：反转mask，让岩石区域变为255（保持原色），背景区域变为0（变黑色）
+        inverted_mask = cv2.bitwise_not(mask)
         result = image.copy()
-        result[mask == 0] = 0
+        result[inverted_mask == 0] = 0  # 背景区域（原来mask为255的地方）变黑色
         return result
 
 
-# =========== 分割可视化类 ===========
 class SegmentationVisualizer:
     """分割可视化类"""
 
@@ -725,7 +852,6 @@ class SegmentationVisualizer:
         return comparison_with_title
 
 
-# =========== 批量分割流程 ===========
 class BatchSegmentationWorker:
     """批量分割工作器"""
 
