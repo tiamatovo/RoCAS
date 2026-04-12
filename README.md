@@ -8,8 +8,6 @@ RoCAS (Rock Color Analysis System) is a comprehensive tool for rock image analys
 
 #### How do I get set up?
 
-See the tutorial video: [Link to tutorial video] or follow the instructions:
-
 1. Clone the repository
 
    ```bash
@@ -71,10 +69,9 @@ Usage
 -  **Zhaoyuan**(000056):  https://www.cgsi.cn/CGSIBiz/Sample_List.aspx?PKIIN=000056 
 -  **U-Net train dataset**: https://cloud.189.cn/t/fy6NviUJVfYn（password：3xxk）
 
+**License**
 
-License
-
-Copyright (C) 2026 Xiaoying, Tian
+**Copyright (C) 2026 Xiaoying, Tian**
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
