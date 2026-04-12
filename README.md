@@ -60,7 +60,7 @@ OUTPUT FILES
 
 #### Who do I talk to?
 
-**Contact:** Xiaoying,Tian. Xinjiang University
+**Contact:** Xiaoying Tian. Xinjiang University
 
 **Email**: dachang0220@163.com
 
