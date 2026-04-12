@@ -31,7 +31,7 @@ RoCAS (Rock Color Analysis System) 是一个综合的岩石图像分析工具，
    python RoCAS.py
    ```
 
-使用方法
+### 使用方法
 
 1) 启动应用程序：
    - 对于 Windows 用户：双击 RoCAS.py 或从终端运行 `python RoCAS.py`
@@ -61,7 +61,7 @@ RoCAS (Rock Color Analysis System) 是一个综合的岩石图像分析工具，
 - **训练模型**：保存在 `models/` 目录中，包括 U-Net 分割模型和颜色识别模型。
 - **分析日志**：保存在 `logs/` 目录中，包括分析过程的详细日志。
 
-联系方式
+### **联系方式**
 
 Contact: XiaoyingTian.Xinjiang University
 

@@ -58,11 +58,11 @@ OUTPUT FILES
 - **Trained models**: Saved in the `models/` directory, including U-Net segmentation models and color recognition models.
 - **Analysis logs**: Saved in the `logs/` directory, including detailed logs of the analysis process.
 
-Who do I talk to?
+#### Who do I talk to?
 
-Contact: Xiaoying,Tian. Xinjiang University
+**Contact:** Xiaoying,Tian. Xinjiang University
 
-Email: dachang0220@163.com
+**Email**: dachang0220@163.com
 
 License
 
