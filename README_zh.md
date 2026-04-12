@@ -53,6 +53,8 @@ RoCAS (Rock Color Analysis System) 是一个综合的岩石图像分析工具，
 
 9) 要训练自定义颜色识别模型，点击 "Model Training" 并选择 "Color Recognition"。按照说明选择训练数据和参数。
 
+10) 要使用U-net模型，需要先下载我们已经训练好的特定数据模型结果：https://github.com/tiamatovo/RoCAS/releases ， 然后从 /samples 文件夹中加载实例样本图，可快速上手查看效果。
+
 输出文件
 
 - **分割结果**：保存在输入图像的同一目录中，包括原始图像、分割结果、分割掩码和黑色背景的目标。

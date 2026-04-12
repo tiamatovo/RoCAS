@@ -9,7 +9,6 @@ import json
 import torch
 
 
-# ========== 分割 ===========
 class RockSegmenter:
     def __init__(self, log_callback=None):
         self.segmentation_methods_used = {}
@@ -736,7 +735,6 @@ class RockSegmenter:
         return result
 
 
-# =========== 分割可视化类 ===========
 class SegmentationVisualizer:
     """分割可视化类"""
 
@@ -854,7 +852,6 @@ class SegmentationVisualizer:
         return comparison_with_title
 
 
-# =========== 批量分割流程 ===========
 class BatchSegmentationWorker:
     """批量分割工作器"""
 

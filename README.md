@@ -51,6 +51,7 @@ Usage
 
 9) To train a custom color recognition model, click "Model Training" and select "Color Recognition". Follow the instructions to select training data and parameters.
 
+10) To use the U-net model, you first need to download the results of our pre-trained model on specific data: https://github.com/tiamatovo/RoCAS/releases. Then, load the instance sample images from the /samples folder to quickly get started and see the results. 
 OUTPUT FILES
 
 - **Segmentation results**: Saved in the same directory as the input image, including original image, segmentation result, segmentation mask, and subject with black background.
